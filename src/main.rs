@@ -1,17 +1,13 @@
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 use sha256;
-use std::{
-    collections::HashMap,
-    fs,
-    path::Path,
-    path::PathBuf,
-    sync::{atomic::AtomicUsize, mpsc::channel, Arc, Mutex},
-};
+use std::{collections::HashMap, fs, path::PathBuf, sync::mpsc::channel};
 use threadpool::ThreadPool;
 use walkdir::WalkDir;
 
-static IMGS: &[&str] = &["jpeg", "jpg", "heic", "json"];
+static IMGS: &[&str] = &[
+    "jpeg", "jpg", "heic", "png", "mov", "mp4", "gif", "aae", "tiff",
+];
 static KNOWN_EXT: &[&str] = &[
     "timestamp",
     "toml",
