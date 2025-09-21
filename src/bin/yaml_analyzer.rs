@@ -8,76 +8,76 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 fn main() {
-    let paths = fs::read_dir("./").unwrap();
+    // let paths = fs::read_dir("./").unwrap();
     let mut result: HashMap<String, Vec<Image>> = HashMap::new();
-    for path in paths {
-        let path = path.unwrap();
+    // for path in paths {
+    let path = "%2FUsers%2Fdtv%2FDocuments%2Ffrom%20white%20macbook_images.yaml";
 
-        if !path
-            .file_name()
-            .to_str()
-            .to_owned()
-            .unwrap()
-            .ends_with("DIRTY_images.yaml")
-        // .ends_with("DIRTY_dups.yaml")
-        {
-            println!("Continuing for path {:?}", path);
-            continue;
-        }
+    // if !path
+    //     .file_name()
+    //     .to_str()
+    //     .to_owned()
+    //     .unwrap()
+    //     .ends_with("DIRTY_images.yaml")
+    // // .ends_with("DIRTY_dups.yaml")
+    // {
+    //     println!("Continuing for path {:?}", path);
+    //     continue;
+    // }
 
-        println!("Processing: {:?}", path);
+    println!("Processing: {:?}", path);
 
-        let contents = fs::read_to_string(path.path()).unwrap();
-        let ht: HashMap<String, Vec<Image>> = serde_yaml::from_str(&contents).unwrap();
+    let contents = fs::read_to_string(path).unwrap();
+    let ht: HashMap<String, Vec<Image>> = serde_yaml::from_str(&contents).unwrap();
 
-        // for (k, mut v) in ht {
-        //     if !result.contains_key(&k) {
-        //         result.insert(k, v);
-        //         continue;
-        //     }
-        //     result.get_mut(&k).unwrap().append(v.as_mut());
-        // }
-        //
-        //
-        // let dups: Vec<(Image, Vec<Image>)> = serde_yaml::from_str(&contents).unwrap();
-        println!("Moving good files");
-        for (sha, imgs) in ht {
-            // fs::rename(
-            //     imgs[0].path.clone(),
-            //     format!(
-            //         "/Volumes/FlashCard/__UNIQUES__4/{}-{}",
-            //         imgs[0].name,
-            //         urlencoding::encode(&imgs[0].path),
-            //     ),
-            // )
-            // .expect(&format!(
-            //     "Failed to move it move it: {}",
-            //     imgs[0].path.clone()
-            // ));
-            // println!(
-            //     "mv '{}' '/Volumes/Hippie/UNIQUES_1/{}-{}'",
-            //     imgs[0].path,
-            //     imgs[0].name,
-            //     urlencoding::encode(&imgs[0].path),
-            // );
-        }
-    }
-
-    println!("Moving duplicates");
-    let dup_contents = fs::read_to_string("%2FVolumes%2FFlashCard%2FDIRTY_dups.yaml").unwrap();
-
-    let dups: Vec<(Image, Vec<Image>)> = serde_yaml::from_str(&dup_contents).unwrap();
-    for (img, _) in dups {
+    // for (k, mut v) in ht {
+    //     if !result.contains_key(&k) {
+    //         result.insert(k, v);
+    //         continue;
+    //     }
+    //     result.get_mut(&k).unwrap().append(v.as_mut());
+    // }
+    //
+    //
+    // let dups: Vec<(Image, Vec<Image>)> = serde_yaml::from_str(&contents).unwrap();
+    // println!("Moving good files");
+    for (sha, imgs) in ht {
         fs::rename(
-            img.path.clone(),
+            imgs[0].path.clone(),
             format!(
-                "/Volumes/FlashCard/__DUPES__4/{}-{}",
-                img.name,
-                urlencoding::encode(&img.path),
+                "/Users/dtv/UNIQUE_IMGS/xmp/{}",
+                imgs[0].name,
+                // urlencoding::encode(&imgs[0].path),
             ),
         )
-        .expect(&format!("Failed to move it a dup file: {}", img.path));
+        .expect(&format!(
+            "Failed to move it move it: {}",
+            imgs[0].path.clone()
+        ));
+        println!(
+            "mv '{}' '/Volumes/Hippie/UNIQUES_1/{}-{}'",
+            imgs[0].path,
+            imgs[0].name,
+            urlencoding::encode(&imgs[0].path),
+        );
     }
+    // }
+
+    println!("Moving duplicates");
+    // let dup_contents = fs::read_to_string("%2FVolumes%2FHippie%2F_dups.yaml").unwrap();
+
+    // let dups: Vec<(Image, Vec<Image>)> = serde_yaml::from_str(&dup_contents).unwrap();
+    // for (img, _) in dups {
+    //     fs::rename(
+    //         img.path.clone(),
+    //         format!(
+    //             "/Volumes/Hippie/__DUPES__5/{}-{}",
+    //             img.name,
+    //             urlencoding::encode(&img.path),
+    //         ),
+    //     )
+    //     .expect(&format!("Failed to move it a dup file: {}", img.path));
+    // }
 
     // let mut imgs_by_folder: HashMap<String, Vec<Image>> = HashMap::new();
 
