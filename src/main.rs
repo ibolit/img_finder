@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use chrono::Utc;
-use clap::Parser;
+// use clap::Parser;
 use indicatif::ProgressIterator;
 use nom_exif::Error;
 use nom_exif::{
@@ -20,6 +20,30 @@ use std::{
 };
 use threadpool::ThreadPool;
 use walkdir::WalkDir;
+
+use clap::{Parser, Subcommand};
+
+#[derive(Parser, Debug)]
+#[command(
+    author = "Timofey",
+    version = "2.2.2",
+    about = "this is about",
+    long_about = "This is about long"
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    #[command(long_about = "This is about long for this command")]
+    Add {
+        #[arg(short, long)]
+        name: String,
+    },
+    List,
+}
 
 static IMGS: &[&str] = &[
     "jpeg", "jpg", "heic", "png", "mov", "mp4", "gif", "aae", "tiff", "wav", "avi", "m4v", "mpg",
@@ -50,6 +74,16 @@ struct Args {
 }
 
 fn main() {
+    let cli = Cli::parse();
+    match cli.command {
+        Some(Commands::Add { name }) => {
+            println!("This is add {}", name);
+        }
+        Some(Commands::List) => {
+            println!("This is list");
+        }
+        None => println!("None"),
+    };
     let args = Args::parse();
 
     let contents = fs::read_to_string("hippie_images.yaml").unwrap();
