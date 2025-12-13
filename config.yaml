@@ -1,0 +1,40 @@
+image_formats:
+  - jpeg
+  - jpg
+  - heic
+  - png
+  - mov
+  - mp4
+  - gif
+  - aae
+  - tiff
+  - wav
+  - avi
+  - m4v
+  - mpg
+  - mpeg
+  - tiff
+  - tif
+  - raf
+  - raw
+  - bmp
+  - psd
+  - xmp
+  - wmv
+
+known_formats:
+  - timestamp
+  - toml
+  - o
+  - rmeta
+  - iml
+  - sample
+  - rs
+  - bin
+
+skip_dirs:
+  - System
+  - Users
+  - etc
+  - private
+  - usr

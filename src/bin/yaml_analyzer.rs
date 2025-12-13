@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 fn main() {
     // let paths = fs::read_dir("./").unwrap();
-    let mut result: HashMap<String, Vec<Image>> = HashMap::new();
+    let result: HashMap<String, Vec<Image>> = HashMap::new();
     // for path in paths {
     let path = "%2FUsers%2Fdtv%2FDocuments%2Ffrom%20white%20macbook_images.yaml";
 
@@ -164,7 +164,7 @@ fn main() {
     // out_file.write_all(serialized.as_bytes()).unwrap();
 }
 
-fn shas(imgs: &Vec<Image>) -> HashSet<String> {
+fn shas(imgs: &[Image]) -> HashSet<String> {
     imgs.iter().map(|img| img.sha256.clone()).collect()
 }
 

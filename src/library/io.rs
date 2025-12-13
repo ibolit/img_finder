@@ -35,6 +35,7 @@ pub fn write_to_yaml(new_ht: &impl serde::Serialize, to: &str) {
         .expect("Failed to write image info");
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
     use std::collections::HashMap;

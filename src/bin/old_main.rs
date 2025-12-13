@@ -7,6 +7,7 @@ use indicatif::ProgressIterator;
 use sha256;
 use std::io::prelude::*;
 
+use std::path::Path;
 use std::{collections::HashMap, fs::File, path::PathBuf, sync::mpsc::channel};
 use threadpool::ThreadPool;
 use walkdir::WalkDir;
@@ -59,16 +60,14 @@ fn main() {
         .progress_count(ht.len() as u64);
 
     let mut no_exifs: Vec<Image> = vec![];
-    let images = images
-        .map(|img| {
-            if img.path.clone() == "NO_EXIF" {
-                no_exifs.push(ht[&img.sha256].first().unwrap().clone());
-                None
-            } else {
-                Some(img)
-            }
-        })
-        .flatten();
+    let images = images.filter_map(|img| {
+        if img.path.clone() == "NO_EXIF" {
+            no_exifs.push(ht[&img.sha256].first().unwrap().clone());
+            None
+        } else {
+            Some(img)
+        }
+    });
     let new_ht: HashMap<String, Image> = images.map(|img| (img.sha256.clone(), img)).collect();
 
     write_to_yaml(
@@ -156,10 +155,7 @@ fn main_2() {
     log_time("Done calculating shas");
     let mut imgs_by_hash: HashMap<String, Vec<Image>> = HashMap::new();
     for i in images {
-        imgs_by_hash
-            .entry(i.sha256.clone())
-            .or_insert(vec![])
-            .push(i);
+        imgs_by_hash.entry(i.sha256.clone()).or_default().push(i);
     }
     log_time("Done making the hashmap");
 
@@ -178,14 +174,14 @@ fn main_2() {
         .expect("failed to write unknonwn");
 }
 
-fn extension(entry: &PathBuf) -> Option<String> {
+fn extension(entry: &Path) -> Option<String> {
     Some(entry.extension()?.to_str()?.to_lowercase())
 }
 
-fn is_image(ext: &str, img_formats: &Vec<String>) -> bool {
+fn is_image(ext: &str, img_formats: &[String]) -> bool {
     img_formats.contains(&ext.to_owned())
 }
 
-fn is_known(ext: &str, known_formats: &Vec<String>) -> bool {
+fn is_known(ext: &str, known_formats: &[String]) -> bool {
     known_formats.contains(&ext.to_owned())
 }
