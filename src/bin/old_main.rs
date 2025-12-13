@@ -1,4 +1,5 @@
-use img_finder::{log_time, move_to_datetime_folder, read_yaml_file, write_to_yaml, Image};
+use img_finder::library::io::{read_yaml_file, write_to_yaml};
+use img_finder::library::lib::{log_time, move_to_datetime_folder, Image};
 
 use indicatif::ProgressIterator;
 use sha256;
@@ -63,7 +64,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let ht = read_yaml_file("hippie_images.yaml").unwrap();
+    let ht: HashMap<String, Vec<Image>> = read_yaml_file("hippie_images.yaml").unwrap();
 
     let images = ht
         .values()
