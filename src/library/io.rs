@@ -19,7 +19,7 @@ impl From<serde_yaml::Error> for YamlReadError {
     }
 }
 
-pub fn read_yaml_file<T>(path: &str) -> Result<T, YamlReadError>
+pub fn read_from_yaml<T>(path: &str) -> Result<T, YamlReadError>
 where
     T: DeserializeOwned,
 {
@@ -33,4 +33,29 @@ pub fn write_to_yaml(new_ht: &impl serde::Serialize, to: &str) {
     let mut file = File::create(to).expect("Failed to open a file for writing image info");
     file.write_all(yaml.as_bytes())
         .expect("Failed to write image info");
+}
+
+mod test {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_one() {
+        let mut my_table: HashMap<String, Vec<i32>> = HashMap::new();
+        my_table.insert("hello".to_string(), vec![3, 2, 1]);
+
+        let thing = tempfile::Builder::new()
+            .prefix("example")
+            .tempdir()
+            .unwrap();
+
+        let file_path = &vec![thing.path().to_str().unwrap(), "/thing.yaml"].join("");
+        write_to_yaml(&my_table, file_path);
+        let from_file: HashMap<String, Vec<i32>> = read_from_yaml(file_path).unwrap();
+
+        assert!(
+            my_table == from_file,
+            "What we read from file is not the same as what we created initially"
+        );
+    }
 }

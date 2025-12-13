@@ -1,4 +1,6 @@
-use img_finder::library::io::{read_yaml_file, write_to_yaml};
+// use config::Config;
+use img_finder::library::config::Config;
+use img_finder::library::io::{read_from_yaml, write_to_yaml};
 use img_finder::library::lib::{log_time, move_to_datetime_folder, Image};
 
 use indicatif::ProgressIterator;
@@ -33,26 +35,10 @@ enum Commands {
     List,
 }
 
-static IMGS: &[&str] = &[
-    "jpeg", "jpg", "heic", "png", "mov", "mp4", "gif", "aae", "tiff", "wav", "avi", "m4v", "mpg",
-    "mpeg", "tiff", "tif", "raf", "raw", "bmp", "psd", "xmp", "wmv",
-];
-
 // static EXIFABLE: &[&str] = &[
 //     "jpeg", "jpg", "heic", "png", "mov", "mp4", "gif", "aae", "tiff", "wav", "avi", "m4v", "mpg",
 //     "mpeg", "tiff", "tif", "raf", "raw", "bmp", "psd", "xmp", "wmv",
 // ];
-
-static KNOWN_EXT: &[&str] = &[
-    "timestamp",
-    "toml",
-    "o",
-    "rmeta",
-    "iml",
-    "sample",
-    "rs",
-    "bin",
-];
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about=None)]
@@ -64,7 +50,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let ht: HashMap<String, Vec<Image>> = read_yaml_file("hippie_images.yaml").unwrap();
+    let ht: HashMap<String, Vec<Image>> = read_from_yaml("hippie_images.yaml").unwrap();
 
     let images = ht
         .values()
@@ -97,6 +83,8 @@ fn main() {
 }
 
 fn main_2() {
+    let config = Config::new();
+
     let pool = ThreadPool::new(4);
     let (img_tx, img_rx) = channel();
     let mut unknowns: HashMap<String, Vec<String>> = HashMap::new();
@@ -123,19 +111,14 @@ fn main_2() {
         }
         let curr_dir = path.file_name().unwrap().to_str().unwrap();
 
-        if curr_dir == "System"
-            || curr_dir == "Users"
-            || curr_dir == "etc"
-            || curr_dir == "private"
-            || curr_dir == "usr"
-        {
+        if config.skip_dirs.contains(&curr_dir.to_string()) {
             println!("Got {}", curr_dir);
             continue;
         }
 
         let ext = extension(&path);
         if let Some(ext) = ext {
-            if is_image(&ext) {
+            if is_image(&ext, &config.image_formats) {
                 imgs += 1;
                 let img_tx = img_tx.clone();
                 pool.execute(move || {
@@ -150,7 +133,7 @@ fn main_2() {
                         ))
                         .expect("Chan must not be closed");
                 });
-            } else if !is_known(&ext) {
+            } else if !is_known(&ext, &config.known_formats) {
                 let str_path = path
                     .to_str()
                     .expect(&format!("path has no str {:?}", path))
@@ -199,10 +182,10 @@ fn extension(entry: &PathBuf) -> Option<String> {
     Some(entry.extension()?.to_str()?.to_lowercase())
 }
 
-fn is_image(ext: &str) -> bool {
-    IMGS.contains(&ext)
+fn is_image(ext: &str, img_formats: &Vec<String>) -> bool {
+    img_formats.contains(&ext.to_owned())
 }
 
-fn is_known(ext: &str) -> bool {
-    KNOWN_EXT.contains(&ext)
+fn is_known(ext: &str, known_formats: &Vec<String>) -> bool {
+    known_formats.contains(&ext.to_owned())
 }
