@@ -1,16 +1,19 @@
 // use config::Config;
 use img_finder::library::config::Config;
+use img_finder::library::image;
 use img_finder::library::io::{read_from_yaml, write_to_yaml};
 use img_finder::library::lib::{log_time, move_to_datetime_folder, Image};
 
 use indicatif::ProgressIterator;
 use sha256;
+use std::ffi::OsStr;
 use std::io::prelude::*;
 
 use std::path::Path;
-use std::{collections::HashMap, fs::File, path::PathBuf, sync::mpsc::channel};
+use std::sync::mpsc::Sender;
+use std::{collections::HashMap, fs::File, sync::mpsc::channel};
 use threadpool::ThreadPool;
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
 
 use clap::{Parser, Subcommand};
 
@@ -48,7 +51,7 @@ struct Args {
     folder: String,
 }
 
-fn main() {
+fn main_2() {
     let args = Args::parse();
 
     let ht: HashMap<String, Vec<Image>> = read_from_yaml("hippie_images.yaml").unwrap();
@@ -81,7 +84,45 @@ fn main() {
     );
 }
 
-fn main_2() {
+fn is_excluded(entry: &DirEntry, config: &Config) -> bool {
+    let file_name = entry.file_name().to_string_lossy();
+    if entry.file_type().is_dir() {
+        return !config.skip_dirs.contains(&file_name.as_ref().to_string());
+    }
+    true
+}
+
+fn process_img(path: &Path, img_tx: Sender<(String, String)>) {
+    let sha =
+        sha256::try_digest(&path).expect(&format!("Failed to calculate sha for file {:?}", &path));
+    img_tx
+        .send((
+            path.to_str()
+                .expect(&format!("Path has no str, {:?}", path))
+                .to_owned(),
+            sha,
+        ))
+        .expect("Chan must not be closed");
+}
+
+fn process_unknown(path: &Path, unknowns: &mut HashMap<String, Vec<String>>) {
+    let str_path = path
+        .to_str()
+        .expect(&format!("path has no str {:?}", path))
+        .to_owned();
+    let ext = path
+        .extension()
+        .unwrap_or(OsStr::new("_"))
+        .to_str()
+        .unwrap_or("_")
+        .to_string();
+    unknowns
+        .entry(ext)
+        .and_modify(|paths| paths.push(str_path.to_owned()))
+        .or_insert(vec![str_path]);
+}
+
+fn main() {
     let config = Config::new();
 
     let pool = ThreadPool::new(4);
@@ -93,54 +134,32 @@ fn main_2() {
     let mut imgs = 0;
 
     log_time("Before the dir walk");
+    let file_factory = image::File::factory(&config);
     for entry in WalkDir::new(&args.folder)
         .follow_root_links(false)
         .follow_links(false)
         .max_depth(4)
         .same_file_system(true)
+        .into_iter()
+        .filter_entry(|e| is_excluded(e, &config))
     {
         if let Err(err) = entry {
             println!("{}", err);
             continue;
         }
         let path = entry.unwrap().into_path();
-        if path.is_symlink() {
-            println!("Skipping a symlink at {:?}", path);
-            continue;
-        }
-        let curr_dir = path.file_name().unwrap().to_str().unwrap();
+        let my_file = file_factory.from_path(&path);
 
-        if config.skip_dirs.contains(&curr_dir.to_string()) {
-            println!("Got {}", curr_dir);
-            continue;
-        }
-
-        let ext = extension(&path);
-        if let Some(ext) = ext {
-            if is_image(&ext, &config.image_formats) {
+        match my_file {
+            image::File::SymLink(_) => continue,
+            image::File::Dir(_) => continue,
+            image::File::Known(_) => continue,
+            image::File::Image(p) => {
                 imgs += 1;
-                let img_tx = img_tx.clone();
-                pool.execute(move || {
-                    let sha = sha256::try_digest(&path)
-                        .expect(&format!("Failed to calculate sha for file {:?}", &path));
-                    img_tx
-                        .send((
-                            path.to_str()
-                                .expect(&format!("Path has no str, {:?}", path))
-                                .to_owned(),
-                            sha,
-                        ))
-                        .expect("Chan must not be closed");
-                });
-            } else if !is_known(&ext, &config.known_formats) {
-                let str_path = path
-                    .to_str()
-                    .expect(&format!("path has no str {:?}", path))
-                    .to_owned();
-                unknowns
-                    .entry(ext)
-                    .and_modify(|paths| paths.push(str_path.to_owned()))
-                    .or_insert(vec![str_path]);
+                process_img(&p, img_tx.clone());
+            }
+            image::File::Unknown(p) => {
+                process_unknown(&p, &mut unknowns);
             }
         }
     }
@@ -172,16 +191,4 @@ fn main_2() {
     unexp_file
         .write_all(unknowns_yaml.as_bytes())
         .expect("failed to write unknonwn");
-}
-
-fn extension(entry: &Path) -> Option<String> {
-    Some(entry.extension()?.to_str()?.to_lowercase())
-}
-
-fn is_image(ext: &str, img_formats: &[String]) -> bool {
-    img_formats.contains(&ext.to_owned())
-}
-
-fn is_known(ext: &str, known_formats: &[String]) -> bool {
-    known_formats.contains(&ext.to_owned())
 }
