@@ -1,4 +1,3 @@
-// use config::Config;
 use img_finder::library::config::Config;
 use img_finder::library::image;
 use img_finder::library::io::{read_from_yaml, write_to_yaml};
@@ -156,7 +155,10 @@ fn main() {
             image::File::Known(_) => continue,
             image::File::Image(p) => {
                 imgs += 1;
-                process_img(&p, img_tx.clone());
+                let img_tx = img_tx.clone();
+                pool.execute(move || {
+                    process_img(&p, img_tx.clone());
+                });
             }
             image::File::Unknown(p) => {
                 process_unknown(&p, &mut unknowns);
@@ -166,29 +168,22 @@ fn main() {
 
     log_time("After the loop");
 
-    let images = img_rx
-        .iter()
-        .take(imgs)
-        .map(|(path, sha)| Image::new(path, sha))
-        .collect::<Vec<Image>>();
-    log_time("Done calculating shas");
-    let mut imgs_by_hash: HashMap<String, Vec<Image>> = HashMap::new();
-    for i in images {
-        imgs_by_hash.entry(i.sha256.clone()).or_default().push(i);
-    }
-    log_time("Done making the hashmap");
+    let imgs_by_hash = img_rx.iter().take(imgs).fold(
+        HashMap::<String, Vec<Image>>::new(),
+        |mut map, (path, sha)| {
+            map.entry(sha.clone())
+                .or_default()
+                .push(Image::new(path, sha));
+            map
+        },
+    );
 
-    let yaml = serde_yaml::to_string(&imgs_by_hash).expect("Da fuck");
-    log_time("Done serializing");
-    let mut file = File::create(format!("{}_images.yaml", urlencoding::encode(&args.folder)))
-        .expect("Failed to open a file for writing image info");
-    file.write_all(yaml.as_bytes())
-        .expect("Failed to write image info");
-
-    let mut unexp_file = File::create(format!("{}_unexp.yaml", urlencoding::encode(&args.folder)))
-        .expect("Failed to create a file for writing unexpected things");
-    let unknowns_yaml = serde_yaml::to_string(&unknowns).expect("Convert unknowns to yaml");
-    unexp_file
-        .write_all(unknowns_yaml.as_bytes())
-        .expect("failed to write unknonwn");
+    write_to_yaml(
+        &imgs_by_hash,
+        &format!("{}_images.yaml", urlencoding::encode(&args.folder)),
+    );
+    write_to_yaml(
+        &unknowns,
+        &format!("{}_unexp.yaml", urlencoding::encode(&args.folder)),
+    );
 }
