@@ -6,11 +6,10 @@ use img_finder::library::lib::{log_time, move_to_datetime_folder, Image};
 use indicatif::ProgressIterator;
 use sha256;
 use std::ffi::OsStr;
-use std::io::prelude::*;
 
 use std::path::Path;
 use std::sync::mpsc::Sender;
-use std::{collections::HashMap, fs::File, sync::mpsc::channel};
+use std::{collections::HashMap, sync::mpsc::channel};
 use threadpool::ThreadPool;
 use walkdir::{DirEntry, WalkDir};
 
@@ -91,11 +90,11 @@ fn is_excluded(entry: &DirEntry, config: &Config) -> bool {
     true
 }
 
-fn process_img(path: &Path, img_tx: Sender<(String, String)>) {
+fn process_img(path: &Path, img_tx: Sender<Image>) {
     let sha =
         sha256::try_digest(&path).expect(&format!("Failed to calculate sha for file {:?}", &path));
     img_tx
-        .send((
+        .send(Image::new(
             path.to_str()
                 .expect(&format!("Path has no str, {:?}", path))
                 .to_owned(),
@@ -119,6 +118,28 @@ fn process_unknown(path: &Path, unknowns: &mut HashMap<String, Vec<String>>) {
         .entry(ext)
         .and_modify(|paths| paths.push(str_path.to_owned()))
         .or_insert(vec![str_path]);
+}
+
+fn process_file(
+    my_file: image::File,
+    img_tx: Sender<Image>,
+    pool: &ThreadPool,
+    imgs: &mut usize,
+    unknowns: &mut HashMap<String, Vec<String>>,
+) {
+    match my_file {
+        image::File::SymLink(_) | image::File::Dir(_) | image::File::Known(_) => (),
+        image::File::Image(p) => {
+            *imgs += 1;
+            let img_tx = img_tx.clone();
+            pool.execute(move || {
+                process_img(&p, img_tx.clone());
+            });
+        }
+        image::File::Unknown(p) => {
+            process_unknown(&p, unknowns);
+        }
+    }
 }
 
 fn main() {
@@ -148,35 +169,19 @@ fn main() {
         }
         let path = entry.unwrap().into_path();
         let my_file = file_factory.from_path(&path);
-
-        match my_file {
-            image::File::SymLink(_) => continue,
-            image::File::Dir(_) => continue,
-            image::File::Known(_) => continue,
-            image::File::Image(p) => {
-                imgs += 1;
-                let img_tx = img_tx.clone();
-                pool.execute(move || {
-                    process_img(&p, img_tx.clone());
-                });
-            }
-            image::File::Unknown(p) => {
-                process_unknown(&p, &mut unknowns);
-            }
-        }
+        process_file(my_file, img_tx.clone(), &pool, &mut imgs, &mut unknowns);
     }
 
     log_time("After the loop");
 
-    let imgs_by_hash = img_rx.iter().take(imgs).fold(
-        HashMap::<String, Vec<Image>>::new(),
-        |mut map, (path, sha)| {
-            map.entry(sha.clone())
-                .or_default()
-                .push(Image::new(path, sha));
-            map
-        },
-    );
+    let imgs_by_hash =
+        img_rx
+            .iter()
+            .take(imgs)
+            .fold(HashMap::<String, Vec<Image>>::new(), |mut map, img| {
+                map.entry(img.sha256.clone()).or_default().push(img);
+                map
+            });
 
     write_to_yaml(
         &imgs_by_hash,

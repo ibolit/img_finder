@@ -28,11 +28,11 @@ where
     Ok(ht)
 }
 
-pub fn write_to_yaml(new_ht: &impl serde::Serialize, to: &str) {
-    let yaml = serde_yaml::to_string(new_ht).expect("Da fuck");
-    let mut file = File::create(to).expect("Failed to open a file for writing image info");
+pub fn write_to_yaml(what: &impl serde::Serialize, to: &str) {
+    let yaml = serde_yaml::to_string(what).expect("Failed to serialize the data");
+    let mut file = File::create(to).expect("Failed to open the file for writing the data");
     file.write_all(yaml.as_bytes())
-        .expect("Failed to write image info");
+        .expect("Failed to write data");
 }
 
 #[cfg(test)]
@@ -41,7 +41,7 @@ mod test {
     use std::collections::HashMap;
 
     #[test]
-    fn test_one() {
+    fn test_read_and_write() {
         let mut my_table: HashMap<String, Vec<i32>> = HashMap::new();
         my_table.insert("hello".to_string(), vec![3, 2, 1]);
 
