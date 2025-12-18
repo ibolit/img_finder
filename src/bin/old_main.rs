@@ -1,7 +1,7 @@
 use img_finder::library::config::Config;
 use img_finder::library::image;
 use img_finder::library::io::{read_from_yaml, write_to_yaml};
-use img_finder::library::lib::{log_time, move_to_datetime_folder, Image};
+use img_finder::library::lib::{get_exif_datetime, log_time, move_to_datetime_folder, Image};
 
 use indicatif::ProgressIterator;
 use std::ffi::OsStr;
@@ -92,13 +92,12 @@ fn is_excluded(entry: &DirEntry, skip_dirs: &[String]) -> bool {
 fn process_img(path: &Path, img_tx: Sender<Image>) {
     let sha = sha256::try_digest(&path)
         .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path));
+    let path = path
+        .to_str()
+        .unwrap_or_else(|| panic!("Path has no str, {:?}", path))
+        .to_owned();
     img_tx
-        .send(Image::new(
-            path.to_str()
-                .unwrap_or_else(|| panic!("Path has no str, {:?}", path))
-                .to_owned(),
-            sha,
-        ))
+        .send(Image::new(path.clone(), sha, get_exif_datetime(&path)))
         .expect("Chan must not be closed");
 }
 

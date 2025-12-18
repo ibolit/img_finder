@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
@@ -18,10 +18,11 @@ pub struct Image {
     pub path: String,
     pub name: String,
     pub sha256: String,
+    pub date: Option<DateTime<Utc>>,
 }
 
 impl Image {
-    pub fn new(path: String, sha256: String) -> Self {
+    pub fn new(path: String, sha256: String, date: Option<DateTime<Utc>>) -> Self {
         let name = match PathBuf::from(&path).file_name() {
             None => "Unknown".to_owned(),
             Some(name) => name
@@ -29,20 +30,59 @@ impl Image {
                 .expect("Failed to convert filename to str")
                 .to_owned(),
         };
-        Self { path, name, sha256 }
+        Self {
+            path,
+            name,
+            sha256,
+            date,
+        }
+    }
+}
+
+pub fn get_exif_datetime(path: &str) -> Option<DateTime<Utc>> {
+    let mut parser = MediaParser::new();
+    let media_source = MediaSource::file_path(path);
+    if let Err(_e) = media_source {
+        None
+    } else {
+        let media_source = media_source.unwrap();
+
+        let iter_res: Result<ExifIter, Error> = parser.parse(media_source);
+
+        let mut candidate_time: Option<DateTime<Utc>> = None;
+
+        match iter_res {
+            Err(_e) => None,
+            Ok(iter) => {
+                for a in iter {
+                    let tag = a.tag().unwrap_or(ExifTag::Make);
+                    if time_tags().contains(&tag) {
+                        if let Some(Time(c)) = a.get_value() {
+                            let _ = candidate_time.insert(c.to_utc());
+                        }
+                        if let Some(NaiveDateTime(c)) = a.get_value() {
+                            candidate_time.get_or_insert_with(move || {
+                                min(candidate_time.unwrap_or(c.and_utc()), c.and_utc())
+                            });
+                        }
+                    }
+                }
+                candidate_time
+            }
+        }
     }
 }
 
 pub fn move_to_datetime_folder(img: &Image) -> Image {
     let mut parser = MediaParser::new();
-    let ms = MediaSource::file_path(&img.path);
-    if let Err(_e) = ms {
+    let media_source = MediaSource::file_path(&img.path);
+    if let Err(_e) = media_source {
         return img.clone();
     }
 
-    let ms = ms.unwrap();
+    let media_source = media_source.unwrap();
 
-    let iter_res: Result<ExifIter, Error> = parser.parse(ms);
+    let iter_res: Result<ExifIter, Error> = parser.parse(media_source);
 
     let mut candidate_time = Utc::now();
 
