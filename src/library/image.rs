@@ -5,11 +5,11 @@ pub struct FileFactory {
     known_formats: Vec<String>,
 }
 
-impl<'a> FileFactory {
+impl FileFactory {
     fn new(image_formats: Vec<String>, known_formats: Vec<String>) -> Self {
         FileFactory {
-            image_formats: image_formats,
-            known_formats: known_formats,
+            image_formats,
+            known_formats,
         }
     }
 
@@ -20,17 +20,17 @@ impl<'a> FileFactory {
         if path.is_dir() {
             return File::Dir(path.into());
         }
-        let ext = extension(&path);
+        let ext = extension(path);
         if let Some(ext) = ext {
             if is_image(&ext, &self.image_formats) {
-                return File::Image(path.into());
+                File::Image(path.into())
             } else if !is_known(&ext, &self.known_formats) {
-                return File::Unknown(path.into());
+                File::Unknown(path.into())
             } else {
-                return File::Known(path.into());
+                File::Known(path.into())
             }
         } else {
-            return File::Unknown(path.into());
+            File::Unknown(path.into())
         }
     }
 }
@@ -45,7 +45,7 @@ pub enum File {
 }
 
 impl File {
-    pub fn factory<'a>(image_formats: Vec<String>, known_formats: Vec<String>) -> FileFactory {
+    pub fn factory(image_formats: Vec<String>, known_formats: Vec<String>) -> FileFactory {
         FileFactory::new(image_formats, known_formats)
     }
 }

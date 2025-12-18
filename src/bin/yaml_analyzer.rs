@@ -1,15 +1,13 @@
 use std::{
     collections::{HashMap, HashSet},
-    fs::{self, File},
-    io::Write,
-    path::Path,
+    fs,
 };
 
 use serde::{Deserialize, Serialize};
 
 fn main() {
     // let paths = fs::read_dir("./").unwrap();
-    let result: HashMap<String, Vec<Image>> = HashMap::new();
+    // let result: HashMap<String, Vec<Image>> = HashMap::new();
     // for path in paths {
     let path = "%2FUsers%2Fdtv%2FDocuments%2Ffrom%20white%20macbook_images.yaml";
 
@@ -41,7 +39,7 @@ fn main() {
     //
     // let dups: Vec<(Image, Vec<Image>)> = serde_yaml::from_str(&contents).unwrap();
     // println!("Moving good files");
-    for (sha, imgs) in ht {
+    for (_sha, imgs) in ht {
         fs::rename(
             imgs[0].path.clone(),
             format!(
@@ -50,10 +48,7 @@ fn main() {
                 // urlencoding::encode(&imgs[0].path),
             ),
         )
-        .expect(&format!(
-            "Failed to move it move it: {}",
-            imgs[0].path.clone()
-        ));
+        .unwrap_or_else(|_| panic!("Failed to move it move it: {}", imgs[0].path.clone()));
         println!(
             "mv '{}' '/Volumes/Hippie/UNIQUES_1/{}-{}'",
             imgs[0].path,

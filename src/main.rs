@@ -1,4 +1,3 @@
-use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     buffer::Buffer,
@@ -13,8 +12,10 @@ use std::io;
 
 fn main() -> io::Result<()> {
     let mut terminal = ratatui::init();
-    let mut app = App::default();
-    app.commands = vec!["one".into(), "two".into(), "three".into()];
+    let mut app = App {
+        commands: vec!["one".into(), "two".into(), "three".into()],
+        ..Default::default()
+    };
 
     let app_result = app.run(&mut terminal);
     ratatui::restore();

@@ -4,7 +4,7 @@ use img_finder::library::io::{read_from_yaml, write_to_yaml};
 use img_finder::library::lib::{log_time, move_to_datetime_folder, Image};
 
 use indicatif::ProgressIterator;
-use sha256;
+// use sha256;
 use std::ffi::OsStr;
 
 use std::path::Path;
@@ -82,7 +82,7 @@ fn main_2() {
     );
 }
 
-fn is_excluded(entry: &DirEntry, skip_dirs: &Vec<String>) -> bool {
+fn is_excluded(entry: &DirEntry, skip_dirs: &[String]) -> bool {
     let file_name = entry.file_name().to_string_lossy();
     if entry.file_type().is_dir() {
         return !skip_dirs.contains(&file_name.as_ref().to_string());
@@ -91,12 +91,12 @@ fn is_excluded(entry: &DirEntry, skip_dirs: &Vec<String>) -> bool {
 }
 
 fn process_img(path: &Path, img_tx: Sender<Image>) {
-    let sha =
-        sha256::try_digest(&path).expect(&format!("Failed to calculate sha for file {:?}", &path));
+    let sha = sha256::try_digest(&path)
+        .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path));
     img_tx
         .send(Image::new(
             path.to_str()
-                .expect(&format!("Path has no str, {:?}", path))
+                .unwrap_or_else(|| panic!("Path has no str, {:?}", path))
                 .to_owned(),
             sha,
         ))
@@ -106,7 +106,7 @@ fn process_img(path: &Path, img_tx: Sender<Image>) {
 fn process_unknown(path: &Path, unknowns: &mut HashMap<String, Vec<String>>) {
     let str_path = path
         .to_str()
-        .expect(&format!("path has no str {:?}", path))
+        .unwrap_or_else(|| panic!("path has no str {:?}", path))
         .to_owned();
     let ext = path
         .extension()
@@ -143,7 +143,7 @@ fn process_file(
 }
 
 fn main() {
-    let config = Config::new();
+    let config = Config::new("config.yaml");
     process_whole_task(config.image_formats, config.known_formats, config.skip_dirs);
 }
 

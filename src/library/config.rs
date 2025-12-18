@@ -10,8 +10,8 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Self {
-        let file = fs::read_to_string("config.yaml").unwrap();
+    pub fn new(path: &str) -> Self {
+        let file = fs::read_to_string(path).unwrap();
         serde_yaml::from_str(&file).unwrap()
     }
 }

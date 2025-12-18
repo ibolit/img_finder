@@ -10,7 +10,7 @@ use nom_exif::{
 };
 
 pub fn log_time(msg: &str) {
-    println!("{}: {}", Utc::now().to_string(), msg);
+    println!("{}: {}", Utc::now(), msg);
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -83,7 +83,7 @@ pub fn move_to_datetime_folder(img: &Image) -> Image {
             );
 
             fs::rename(&img.path, &new_img_path)
-                .expect(&format!("Failed to move it move it: {}", &img.path));
+                .unwrap_or_else(|_| panic!("Failed to move it move it: {}", &img.path));
 
             Image {
                 path: new_img_path,
