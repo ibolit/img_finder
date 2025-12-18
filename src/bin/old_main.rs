@@ -4,7 +4,6 @@ use img_finder::library::io::{read_from_yaml, write_to_yaml};
 use img_finder::library::lib::{log_time, move_to_datetime_folder, Image};
 
 use indicatif::ProgressIterator;
-// use sha256;
 use std::ffi::OsStr;
 
 use std::path::Path;
@@ -181,14 +180,13 @@ fn process_whole_task(
 
     log_time("After the loop");
 
-    let imgs_by_hash =
-        img_rx
-            .iter()
-            .take(imgs)
-            .fold(HashMap::<String, Vec<Image>>::new(), |mut map, img| {
-                map.entry(img.sha256.clone()).or_default().push(img);
-                map
-            });
+    let imgs_by_hash = img_rx.iter().take(imgs).progress_count(imgs as u64).fold(
+        HashMap::<String, Vec<Image>>::new(),
+        |mut map, img| {
+            map.entry(img.sha256.clone()).or_default().push(img);
+            map
+        },
+    );
 
     write_to_yaml(
         &imgs_by_hash,

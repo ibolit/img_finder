@@ -81,9 +81,6 @@ mod test {
         let known_formats = vec!["wav".to_string(), "avi".to_string(), "txt".to_string()];
         let file_factory = File::factory(image_formats, known_formats);
 
-        fn symlink(x: &Path) -> File {
-            File::SymLink(x.into())
-        }
         fn unknown(x: &Path) -> File {
             File::Unknown(x.into())
         }
