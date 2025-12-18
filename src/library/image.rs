@@ -1,14 +1,16 @@
 use std::path::Path;
 
-use crate::library::config::Config;
-
-pub struct FileFactory<'a> {
-    config: &'a Config,
+pub struct FileFactory {
+    image_formats: Vec<String>,
+    known_formats: Vec<String>,
 }
 
-impl<'a> FileFactory<'a> {
-    fn new(config: &'a Config) -> Self {
-        FileFactory { config }
+impl<'a> FileFactory {
+    fn new(image_formats: Vec<String>, known_formats: Vec<String>) -> Self {
+        FileFactory {
+            image_formats: image_formats,
+            known_formats: known_formats,
+        }
     }
 
     pub fn from_path(&self, path: &Path) -> File {
@@ -20,9 +22,9 @@ impl<'a> FileFactory<'a> {
         }
         let ext = extension(&path);
         if let Some(ext) = ext {
-            if is_image(&ext, &self.config.image_formats) {
+            if is_image(&ext, &self.image_formats) {
                 return File::Image(path.into());
-            } else if !is_known(&ext, &self.config.known_formats) {
+            } else if !is_known(&ext, &self.known_formats) {
                 return File::Unknown(path.into());
             } else {
                 return File::Known(path.into());
@@ -43,8 +45,8 @@ pub enum File {
 }
 
 impl File {
-    pub fn factory<'a>(config: &'a Config) -> FileFactory {
-        FileFactory::new(config)
+    pub fn factory<'a>(image_formats: Vec<String>, known_formats: Vec<String>) -> FileFactory {
+        FileFactory::new(image_formats, known_formats)
     }
 }
 
@@ -75,12 +77,9 @@ mod test {
 
     #[test]
     fn test_one() {
-        let config = Config {
-            image_formats: vec!["jpeg".to_string(), "jpg".to_string(), "png".to_string()],
-            known_formats: vec!["wav".to_string(), "avi".to_string(), "txt".to_string()],
-            skip_dirs: vec!["Library".to_string()],
-        };
-        let file_factory = File::factory(&config);
+        let image_formats = vec!["jpeg".to_string(), "jpg".to_string(), "png".to_string()];
+        let known_formats = vec!["wav".to_string(), "avi".to_string(), "txt".to_string()];
+        let file_factory = File::factory(image_formats, known_formats);
 
         fn symlink(x: &Path) -> File {
             File::SymLink(x.into())

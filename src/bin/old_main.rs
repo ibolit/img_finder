@@ -82,10 +82,10 @@ fn main_2() {
     );
 }
 
-fn is_excluded(entry: &DirEntry, config: &Config) -> bool {
+fn is_excluded(entry: &DirEntry, skip_dirs: &Vec<String>) -> bool {
     let file_name = entry.file_name().to_string_lossy();
     if entry.file_type().is_dir() {
-        return !config.skip_dirs.contains(&file_name.as_ref().to_string());
+        return !skip_dirs.contains(&file_name.as_ref().to_string());
     }
     true
 }
@@ -144,7 +144,14 @@ fn process_file(
 
 fn main() {
     let config = Config::new();
+    process_whole_task(config.image_formats, config.known_formats, config.skip_dirs);
+}
 
+fn process_whole_task(
+    image_formats: Vec<String>,
+    known_formats: Vec<String>,
+    skip_dirs: Vec<String>,
+) {
     let pool = ThreadPool::new(4);
     let (img_tx, img_rx) = channel();
     let mut unknowns: HashMap<String, Vec<String>> = HashMap::new();
@@ -154,14 +161,14 @@ fn main() {
     let mut imgs = 0;
 
     log_time("Before the dir walk");
-    let file_factory = image::File::factory(&config);
+    let file_factory = image::File::factory(image_formats, known_formats);
     for entry in WalkDir::new(&args.folder)
         .follow_root_links(false)
         .follow_links(false)
         .max_depth(4)
         .same_file_system(true)
         .into_iter()
-        .filter_entry(|e| is_excluded(e, &config))
+        .filter_entry(|e| is_excluded(e, &skip_dirs))
     {
         if let Err(err) = entry {
             println!("{}", err);
