@@ -1,5 +1,15 @@
 use std::path::Path;
 
+use chrono::{DateTime, Utc};
+
+use serde::{Deserialize, Serialize};
+use std::{cmp::min, collections::HashSet, path::PathBuf, sync::OnceLock};
+
+use nom_exif::Error;
+use nom_exif::{
+    EntryValue::NaiveDateTime, EntryValue::Time, ExifIter, ExifTag, MediaParser, MediaSource,
+};
+
 pub struct FileFactory {
     image_formats: Vec<String>,
     known_formats: Vec<String>,
@@ -62,12 +72,84 @@ fn is_known(ext: &str, known_formats: &[String]) -> bool {
     known_formats.contains(&ext.to_owned())
 }
 
-pub struct FileIterator {}
-impl Iterator for FileIterator {
-    type Item = File;
-    fn next(&mut self) -> Option<Self::Item> {
-        None
+// pub struct FileIterator {}
+// impl Iterator for FileIterator {
+//     type Item = File;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         None
+//     }
+// }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Image {
+    pub path: String,
+    pub name: String,
+    pub sha256: String,
+    pub date: Option<DateTime<Utc>>,
+}
+
+impl Image {
+    pub fn new(path: String, sha256: String, date: Option<DateTime<Utc>>) -> Self {
+        let name = match PathBuf::from(&path).file_name() {
+            None => "Unknown".to_owned(),
+            Some(name) => name
+                .to_str()
+                .expect("Failed to convert filename to str")
+                .to_owned(),
+        };
+        Self {
+            path,
+            name,
+            sha256,
+            date,
+        }
     }
+}
+
+pub fn get_exif_datetime(path: &str) -> Option<DateTime<Utc>> {
+    let mut parser = MediaParser::new();
+    let media_source = MediaSource::file_path(path);
+    if let Err(_e) = media_source {
+        None
+    } else {
+        let media_source = media_source.unwrap();
+
+        let iter_res: Result<ExifIter, Error> = parser.parse(media_source);
+
+        let mut candidate_time: Option<DateTime<Utc>> = None;
+
+        match iter_res {
+            Err(_e) => None,
+            Ok(iter) => {
+                for a in iter {
+                    let tag = a.tag().unwrap_or(ExifTag::Make);
+                    if time_tags().contains(&tag) {
+                        if let Some(Time(c)) = a.get_value() {
+                            let _ = candidate_time.insert(c.to_utc());
+                        }
+                        if let Some(NaiveDateTime(c)) = a.get_value() {
+                            candidate_time.get_or_insert_with(move || {
+                                min(candidate_time.unwrap_or(c.and_utc()), c.and_utc())
+                            });
+                        }
+                    }
+                }
+                candidate_time
+            }
+        }
+    }
+}
+
+fn time_tags() -> &'static HashSet<ExifTag> {
+    static HASHSET: OnceLock<HashSet<ExifTag>> = OnceLock::new();
+    HASHSET.get_or_init(|| {
+        HashSet::from([
+            ExifTag::CreateDate,
+            ExifTag::ModifyDate,
+            ExifTag::DateTimeOriginal,
+            ExifTag::GPSDateStamp,
+        ])
+    })
 }
 
 #[cfg(test)]

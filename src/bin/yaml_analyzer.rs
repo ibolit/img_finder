@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fs,
-};
+use std::{collections::HashMap, fs};
 
 use serde::{Deserialize, Serialize};
 
@@ -159,9 +156,9 @@ fn main() {
     // out_file.write_all(serialized.as_bytes()).unwrap();
 }
 
-fn shas(imgs: &[Image]) -> HashSet<String> {
-    imgs.iter().map(|img| img.sha256.clone()).collect()
-}
+// fn shas(imgs: &[Image]) -> HashSet<String> {
+//     imgs.iter().map(|img| img.sha256.clone()).collect()
+// }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Image {
