@@ -25,6 +25,8 @@ enum AppSubcommand {
     Index {
         #[arg(long, short, help = "Some help")]
         dir: String,
+        #[arg(long, short, help = "File to write the resulting yamls to")]
+        output: Option<String>,
     },
 }
 
@@ -32,9 +34,11 @@ fn main() {
     let config = Config::new("config.yaml");
     let args = Args::parse();
     match args.subcommand {
-        AppSubcommand::Index { dir } => {
+        AppSubcommand::Index { dir, output } => {
+            let output = output.unwrap_or(dir.clone());
             process_whole_task(
                 &dir,
+                &output,
                 config.image_formats,
                 config.known_formats,
                 config.skip_dirs,

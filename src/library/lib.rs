@@ -24,6 +24,7 @@ pub fn log_time(msg: &str, verbose: bool) {
 
 pub fn process_whole_task(
     folder: &str,
+    output: &str,
     image_formats: Vec<String>,
     known_formats: Vec<String>,
     skip_dirs: Vec<String>,
@@ -64,14 +65,12 @@ pub fn process_whole_task(
     );
     log_time("Done", verbose);
 
-    write_to_yaml(
-        &imgs_by_hash,
-        &format!("{}_images.yaml", urlencoding::encode(folder)),
-    );
-    write_to_yaml(
-        &unknowns,
-        &format!("{}_unexp.yaml", urlencoding::encode(folder)),
-    );
+    write_to_yaml(&imgs_by_hash, &compute_yaml_name("images", output));
+    write_to_yaml(&unknowns, &compute_yaml_name("unexp", output));
+}
+
+fn compute_yaml_name(intent: &str, output: &str) -> String {
+    format!("{}_{}.yaml", urlencoding::encode(output), intent)
 }
 
 fn should_exclude(entry: &DirEntry, skip_dirs: &[String]) -> bool {
@@ -86,7 +85,7 @@ fn process_img(path: &Path, img_tx: Sender<image::Image>) {
     let sha = sha256::try_digest(&path)
         .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path));
 
-    let metadata = fs::metadata(&path).expect("Failed to get the len of a file");
+    let metadata = fs::metadata(path).expect("Failed to get the len of a file");
     let size = metadata.len();
 
     let path = path
