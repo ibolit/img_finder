@@ -1,5 +1,5 @@
-use img_finder::library::config::Config;
-use img_finder::library::lib::process_whole_task;
+use img_finder::library::index::process_whole_task;
+use img_finder::library::{config::Config, stats::stats};
 
 use clap::{Parser, Subcommand};
 
@@ -28,6 +28,10 @@ enum AppSubcommand {
         #[arg(long, short, help = "File to write the resulting yamls to")]
         output: Option<String>,
     },
+    Stats {
+        #[arg(long, short, help = "Yaml file to analyze")]
+        input: String,
+    },
 }
 
 fn main() {
@@ -44,6 +48,9 @@ fn main() {
                 config.skip_dirs,
                 args.verbose,
             );
+        }
+        AppSubcommand::Stats { input } => {
+            stats(&input);
         }
     }
 }

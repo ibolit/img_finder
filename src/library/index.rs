@@ -1,4 +1,4 @@
-use chrono::Utc;
+use crate::library::util::log_time;
 
 use crate::library::image;
 use crate::library::image::get_exif_datetime;
@@ -15,12 +15,6 @@ use std::{
 };
 use threadpool::ThreadPool;
 use walkdir::{DirEntry, WalkDir};
-
-pub fn log_time(msg: &str, verbose: bool) {
-    if verbose {
-        eprintln!("{}: {}", Utc::now(), msg);
-    }
-}
 
 pub fn process_whole_task(
     folder: &str,
