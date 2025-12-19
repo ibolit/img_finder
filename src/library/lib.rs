@@ -10,13 +10,16 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::{
     collections::HashMap,
+    fs,
     sync::mpsc::{channel, Sender},
 };
 use threadpool::ThreadPool;
 use walkdir::{DirEntry, WalkDir};
 
-pub fn log_time(msg: &str) {
-    eprintln!("{}: {}", Utc::now(), msg);
+pub fn log_time(msg: &str, verbose: bool) {
+    if verbose {
+        eprintln!("{}: {}", Utc::now(), msg);
+    }
 }
 
 pub fn process_whole_task(
@@ -24,6 +27,7 @@ pub fn process_whole_task(
     image_formats: Vec<String>,
     known_formats: Vec<String>,
     skip_dirs: Vec<String>,
+    verbose: bool,
 ) {
     let pool = ThreadPool::new(4);
     let (img_tx, img_rx) = channel();
@@ -31,7 +35,7 @@ pub fn process_whole_task(
 
     let mut imgs = 0;
 
-    log_time("Before the dir walk");
+    log_time("Before the dir walk", verbose);
     let file_factory = image::File::factory(image_formats, known_formats);
     for entry in WalkDir::new(folder)
         .follow_root_links(false)
@@ -49,7 +53,7 @@ pub fn process_whole_task(
         process_file(my_file, img_tx.clone(), &pool, &mut imgs, &mut unknowns);
     }
 
-    log_time("After the loop");
+    log_time("After the loop", verbose);
 
     let imgs_by_hash = img_rx.iter().take(imgs).progress_count(imgs as u64).fold(
         HashMap::<String, Vec<image::Image>>::new(),
@@ -58,7 +62,7 @@ pub fn process_whole_task(
             map
         },
     );
-    log_time("Done");
+    log_time("Done", verbose);
 
     write_to_yaml(
         &imgs_by_hash,
@@ -81,6 +85,10 @@ fn should_exclude(entry: &DirEntry, skip_dirs: &[String]) -> bool {
 fn process_img(path: &Path, img_tx: Sender<image::Image>) {
     let sha = sha256::try_digest(&path)
         .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path));
+
+    let metadata = fs::metadata(&path).expect("Failed to get the len of a file");
+    let size = metadata.len();
+
     let path = path
         .to_str()
         .unwrap_or_else(|| panic!("Path has no str, {:?}", path))
@@ -90,6 +98,7 @@ fn process_img(path: &Path, img_tx: Sender<image::Image>) {
             path.clone(),
             sha,
             get_exif_datetime(&path),
+            size,
         ))
         .expect("Chan must not be closed");
 }

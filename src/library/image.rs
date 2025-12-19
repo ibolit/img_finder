@@ -86,10 +86,11 @@ pub struct Image {
     pub name: String,
     pub sha256: String,
     pub date: Option<DateTime<Utc>>,
+    pub size: u64,
 }
 
 impl Image {
-    pub fn new(path: String, sha256: String, date: Option<DateTime<Utc>>) -> Self {
+    pub fn new(path: String, sha256: String, date: Option<DateTime<Utc>>, size: u64) -> Self {
         let name = match PathBuf::from(&path).file_name() {
             None => "Unknown".to_owned(),
             Some(name) => name
@@ -102,6 +103,7 @@ impl Image {
             name,
             sha256,
             date,
+            size,
         }
     }
 }
