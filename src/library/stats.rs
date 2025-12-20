@@ -36,7 +36,8 @@ pub fn stats(input: &str) {
         .values()
         .map(|v| {
             v.iter()
-                .find(|&i| i.date.is_some())
+                .filter(|&i| i.date.is_some())
+                .min_by_key(|&i| i.date.unwrap())
                 .unwrap_or(&v[0])
                 .clone()
         })

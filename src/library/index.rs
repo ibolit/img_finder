@@ -1,27 +1,25 @@
-use crate::library::util::log_time;
-
-use image::GenericImageView;
-use iter_read::IterRead;
-use sha2::{Digest, Sha256};
-use std::io;
 extern crate image;
-use image::Pixel;
-
-use crate::library::image as my;
-use crate::library::image::get_exif_datetime;
-use crate::library::io::write_to_yaml;
-
-use indicatif::ProgressIterator;
-use std::ffi::OsStr;
 
 use std::path::Path;
 use std::{
     collections::HashMap,
-    fs,
+    ffi::OsStr,
+    fs, io,
     sync::mpsc::{channel, Sender},
 };
 use threadpool::ThreadPool;
 use walkdir::{DirEntry, WalkDir};
+
+use image::{GenericImageView, Pixel};
+use indicatif::ProgressIterator;
+use iter_read::IterRead;
+use sha2::{Digest, Sha256};
+
+use crate::library::{
+    image::{self as my, get_exif_datetime},
+    io::write_to_yaml,
+    util::log_time,
+};
 
 pub fn process_whole_task(
     folder: &str,
@@ -82,21 +80,24 @@ fn should_exclude(entry: &DirEntry, skip_dirs: &[String]) -> bool {
     true
 }
 
-fn pixel_sha(path: &Path) -> String {
-    let img = image::open(path).unwrap();
+fn pixel_sha(path: &Path) -> Result<String, String> {
+    let img = image::open(path).map_err(|e| format!("{:?}", e))?;
 
     let my_iter = img.pixels().flat_map(|(_, _, pixel)| pixel.to_rgb().0);
 
     let mut reader = IterRead::new(my_iter);
     let mut hasher = Sha256::new();
-    io::copy(&mut reader, &mut hasher).expect("Did it actually fail?");
+    io::copy(&mut reader, &mut hasher).map_err(|e| format!("{:?}", e))?;
     let result = hasher.finalize();
 
-    hex::encode(result)
+    Ok(hex::encode(result))
 }
 
 fn process_img(path: &Path, img_tx: Sender<my::Image>) {
-    let sha = pixel_sha(path);
+    let sha = pixel_sha(path).unwrap_or_else(|_| {
+        sha256::try_digest(&path)
+            .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path))
+    });
 
     let metadata = fs::metadata(path).expect("Failed to get the len of a file");
     let size = metadata.len();

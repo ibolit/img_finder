@@ -1,26 +1,26 @@
 image_formats:
+  - bmp
+  - gif
+  - heic
   - jpeg
   - jpg
-  - heic
-  - png
-  # - mov
-  # - mp4
-  - gif
-  # - aae
-  - tiff
-  # - wav
-  # - avi
   - m4v
-  # - mpg
-  # - mpeg
-  - tiff
-  - tif
+  - png
   - raf
-  # - raw
-  - bmp
-  # - psd
-  # - xmp
+  - tif
+  - tiff
   - wmv
+  # non-pixel-streamable
+  - aae
+  - avi
+  - mov
+  - mp4
+  - mpeg
+  - mpg
+  - psd
+  - raw
+  - wav
+  - xmp
 
 known_formats:
   - timestamp
