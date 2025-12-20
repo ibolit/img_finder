@@ -1,6 +1,13 @@
 use crate::library::util::log_time;
 
-use crate::library::image;
+use image::GenericImageView;
+use iter_read::IterRead;
+use sha2::{Digest, Sha256};
+use std::io;
+extern crate image;
+use image::Pixel;
+
+use crate::library::image as my;
 use crate::library::image::get_exif_datetime;
 use crate::library::io::write_to_yaml;
 
@@ -31,7 +38,7 @@ pub fn process_whole_task(
     let mut imgs = 0;
 
     log_time("Before the dir walk", verbose);
-    let file_factory = image::File::factory(image_formats, known_formats);
+    let file_factory = my::File::factory(image_formats, known_formats);
     for entry in WalkDir::new(folder)
         .follow_root_links(false)
         .follow_links(false)
@@ -51,7 +58,7 @@ pub fn process_whole_task(
     log_time("After the loop", verbose);
 
     let imgs_by_hash = img_rx.iter().take(imgs).progress_count(imgs as u64).fold(
-        HashMap::<String, Vec<image::Image>>::new(),
+        HashMap::<String, Vec<my::Image>>::new(),
         |mut map, img| {
             map.entry(img.sha256.clone()).or_default().push(img);
             map
@@ -75,9 +82,21 @@ fn should_exclude(entry: &DirEntry, skip_dirs: &[String]) -> bool {
     true
 }
 
-fn process_img(path: &Path, img_tx: Sender<image::Image>) {
-    let sha = sha256::try_digest(&path)
-        .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path));
+fn pixel_sha(path: &Path) -> String {
+    let img = image::open(path).unwrap();
+
+    let my_iter = img.pixels().flat_map(|(_, _, pixel)| pixel.to_rgb().0);
+
+    let mut reader = IterRead::new(my_iter);
+    let mut hasher = Sha256::new();
+    io::copy(&mut reader, &mut hasher).expect("Did it actually fail?");
+    let result = hasher.finalize();
+
+    hex::encode(result)
+}
+
+fn process_img(path: &Path, img_tx: Sender<my::Image>) {
+    let sha = pixel_sha(path);
 
     let metadata = fs::metadata(path).expect("Failed to get the len of a file");
     let size = metadata.len();
@@ -87,7 +106,7 @@ fn process_img(path: &Path, img_tx: Sender<image::Image>) {
         .unwrap_or_else(|| panic!("Path has no str, {:?}", path))
         .to_owned();
     img_tx
-        .send(image::Image::new(
+        .send(my::Image::new(
             path.clone(),
             sha,
             get_exif_datetime(&path),
@@ -114,22 +133,22 @@ fn process_unknown(path: &Path, unknowns: &mut HashMap<String, Vec<String>>) {
 }
 
 fn process_file(
-    my_file: image::File,
-    img_tx: Sender<image::Image>,
+    my_file: my::File,
+    img_tx: Sender<my::Image>,
     pool: &ThreadPool,
     imgs: &mut usize,
     unknowns: &mut HashMap<String, Vec<String>>,
 ) {
     match my_file {
-        image::File::SymLink(_) | image::File::Dir(_) | image::File::Known(_) => (),
-        image::File::Image(p) => {
+        my::File::SymLink(_) | my::File::Dir(_) | my::File::Known(_) => (),
+        my::File::Image(p) => {
             *imgs += 1;
             let img_tx = img_tx.clone();
             pool.execute(move || {
                 process_img(&p, img_tx.clone());
             });
         }
-        image::File::Unknown(p) => {
+        my::File::Unknown(p) => {
             process_unknown(&p, unknowns);
         }
     }

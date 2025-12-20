@@ -3,23 +3,23 @@ image_formats:
   - jpg
   - heic
   - png
-  - mov
-  - mp4
+  # - mov
+  # - mp4
   - gif
-  - aae
+  # - aae
   - tiff
-  - wav
-  - avi
+  # - wav
+  # - avi
   - m4v
-  - mpg
-  - mpeg
+  # - mpg
+  # - mpeg
   - tiff
   - tif
   - raf
-  - raw
+  # - raw
   - bmp
-  - psd
-  - xmp
+  # - psd
+  # - xmp
   - wmv
 
 known_formats:
@@ -38,3 +38,5 @@ skip_dirs:
   - etc
   - private
   - usr
+  - no_index
+  - .Trashes

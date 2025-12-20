@@ -9,13 +9,17 @@ chrono = { version = "0.4.41", features = ["serde"] }
 clap = { version = "4.5.23", features = ["derive"] }
 color-eyre = "0.6.5"
 crossterm = "0.29.0"
+hex = "0.4.3"
+image = "0.25.9"
 indicatif = "0.17.11"
+iter-read = "1.1.0"
 nom-exif = "2.5.1"
 ratatui = { version = "0.29.0", features = ["all-widgets"] }
 
 serde = { version = "1.0.217", features = ["derive"] }
 serde_derive = "1.0.217"
 serde_yaml = "0.9.34"
+sha2 = "0.10.9"
 sha256 = "1.5.0"
 threadpool = "1.8.1"
 urlencoding = "2.1.3"
