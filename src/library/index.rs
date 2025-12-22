@@ -15,6 +15,7 @@ use indicatif::ProgressIterator;
 use iter_read::IterRead;
 use sha2::{Digest, Sha256};
 
+use crate::library::image::Dimensions;
 use crate::library::{
     image::{self as my, get_exif_datetime},
     io::write_to_yaml,
@@ -80,23 +81,33 @@ fn should_exclude(entry: &DirEntry, skip_dirs: &[String]) -> bool {
     true
 }
 
-fn pixel_sha(path: &Path) -> Result<String, String> {
+fn pixel_sha(path: &Path) -> Result<(String, Dimensions), String> {
     let img = image::open(path).map_err(|e| format!("{:?}", e))?;
+    let dims: Dimensions = img.dimensions().into();
 
     let my_iter = img.pixels().flat_map(|(_, _, pixel)| pixel.to_rgb().0);
 
     let mut reader = IterRead::new(my_iter);
     let mut hasher = Sha256::new();
-    io::copy(&mut reader, &mut hasher).map_err(|e| format!("{:?}", e))?;
-    let result = hasher.finalize();
-
-    Ok(hex::encode(result))
+    let copy_result = io::copy(&mut reader, &mut hasher).map_err(|e| format!("{:?}", e));
+    match copy_result {
+        Ok(_) => Ok((hex::encode(hasher.finalize()), dims)),
+        Err(_) => Ok((
+            sha256::try_digest(&path)
+                .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path)),
+            dims,
+        )),
+    }
+    // let result = ;
 }
 
 fn process_img(path: &Path, img_tx: Sender<my::Image>) {
-    let sha = pixel_sha(path).unwrap_or_else(|_| {
-        sha256::try_digest(&path)
-            .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path))
+    let (sha, dims) = pixel_sha(path).unwrap_or_else(|_| {
+        (
+            sha256::try_digest(&path)
+                .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path)),
+            Dimensions(0, 0),
+        )
     });
 
     let metadata = fs::metadata(path).expect("Failed to get the len of a file");
@@ -112,6 +123,7 @@ fn process_img(path: &Path, img_tx: Sender<my::Image>) {
             sha,
             get_exif_datetime(&path),
             size,
+            dims,
         ))
         .expect("Chan must not be closed");
 }

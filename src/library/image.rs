@@ -60,7 +60,7 @@ impl File {
     }
 }
 
-fn extension(entry: &Path) -> Option<String> {
+pub fn extension(entry: &Path) -> Option<String> {
     Some(entry.extension()?.to_str()?.to_lowercase())
 }
 
@@ -81,16 +81,33 @@ fn is_known(ext: &str, known_formats: &[String]) -> bool {
 // }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Dimensions(pub u32, pub u32);
+
+impl From<(u32, u32)> for Dimensions {
+    fn from(value: (u32, u32)) -> Self {
+        let (w, h) = value;
+        Dimensions(w, h)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Image {
     pub path: String,
     pub name: String,
     pub sha256: String,
     pub date: Option<DateTime<Utc>>,
-    pub size: u64,
+    pub file_size: u64,
+    pub dimensions: Dimensions,
 }
 
 impl Image {
-    pub fn new(path: String, sha256: String, date: Option<DateTime<Utc>>, size: u64) -> Self {
+    pub fn new(
+        path: String,
+        sha256: String,
+        date: Option<DateTime<Utc>>,
+        file_size: u64,
+        dimensions: Dimensions,
+    ) -> Self {
         let name = match PathBuf::from(&path).file_name() {
             None => "Unknown".to_owned(),
             Some(name) => name
@@ -103,7 +120,8 @@ impl Image {
             name,
             sha256,
             date,
-            size,
+            file_size,
+            dimensions,
         }
     }
 }

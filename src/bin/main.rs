@@ -1,4 +1,5 @@
 use img_finder::library::index::process_whole_task;
+use img_finder::library::stats::symlink_non_date;
 use img_finder::library::{config::Config, stats::stats};
 
 use clap::{Parser, Subcommand};
@@ -32,6 +33,10 @@ enum AppSubcommand {
         #[arg(long, short, help = "Yaml file to analyze")]
         input: String,
     },
+    Symlink {
+        #[arg(long, short, help = "Yaml file to analyze")]
+        input: String,
+    },
 }
 
 fn main() {
@@ -51,6 +56,9 @@ fn main() {
         }
         AppSubcommand::Stats { input } => {
             stats(&input);
+        }
+        AppSubcommand::Symlink { input } => {
+            symlink_non_date(&input);
         }
     }
 }
