@@ -1,4 +1,4 @@
-use img_finder::library::index::process_whole_task;
+use img_finder::library::index::{get_info, process_whole_task};
 use img_finder::library::stats::symlink_non_date;
 use img_finder::library::{config::Config, stats::stats};
 
@@ -39,6 +39,9 @@ enum AppSubcommand {
         #[arg(long, short, help = "Where to put the created symlinks")]
         output: String,
     },
+    Info {
+        input: String,
+    },
 }
 
 fn main() {
@@ -61,6 +64,9 @@ fn main() {
         }
         AppSubcommand::Symlink { input, output } => {
             symlink_non_date(&input, &output, config.screenshot_resolutions);
+        }
+        AppSubcommand::Info { input } => {
+            get_info(&input);
         }
     }
 }

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::Path;
 
 use chrono::{DateTime, Utc};
@@ -87,6 +88,12 @@ impl From<(u32, u32)> for Dimensions {
     fn from(value: (u32, u32)) -> Self {
         let (w, h) = value;
         Dimensions(w, h)
+    }
+}
+
+impl fmt::Display for Dimensions {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} × {}", self.0, self.1)
     }
 }
 

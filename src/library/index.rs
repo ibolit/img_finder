@@ -167,6 +167,18 @@ fn process_file(
     }
 }
 
+pub fn get_info(path: &str) {
+    // let (sha, dims) = pixel_sha(Path::new(path)).unwrap_or_else(|_| {
+    //     (
+    //         sha256::try_digest(&path)
+    //             .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path)),
+    //         Dimensions(0, 0),
+    //     )
+    // });
+    let exif_date = get_exif_datetime(&path);
+    println!("date: {exif_date:?}");
+}
+
 // pub fn move_to_datetime_folder(img: &Image) -> Image {
 //     let mut parser = MediaParser::new();
 //     let media_source = MediaSource::file_path(&img.path);
