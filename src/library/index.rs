@@ -1,5 +1,8 @@
 extern crate image;
 
+use chrono::NaiveDateTime;
+use little_exif::exif_tag::ExifTag;
+use little_exif::metadata::Metadata;
 use std::path::Path;
 use std::{
     collections::HashMap,
@@ -168,15 +171,31 @@ fn process_file(
 }
 
 pub fn get_info(path: &str) {
-    // let (sha, dims) = pixel_sha(Path::new(path)).unwrap_or_else(|_| {
-    //     (
-    //         sha256::try_digest(&path)
-    //             .unwrap_or_else(|_| panic!("Failed to calculate sha for file {:?}", &path)),
-    //         Dimensions(0, 0),
-    //     )
-    // });
-    let exif_date = get_exif_datetime(&path);
-    println!("date: {exif_date:?}");
+    let date_format = "%Y:%m:%d %H:%M:%S";
+    let exif_date = get_exif_datetime(path);
+    match exif_date {
+        Some(exif_date) => println!("{}", exif_date.format(date_format)),
+        None => println!("None"),
+    }
+}
+
+pub fn set_datetime(path: &str, date: &str) {
+    let date_format = "%Y:%m:%d %H:%M:%S";
+
+    let parsed_date = NaiveDateTime::parse_from_str(date, date_format).expect("Bad date format");
+
+    let exif_date = get_exif_datetime(path);
+    if exif_date.is_some() {
+        panic!("You shalt not ovewrite an existing date!");
+    }
+
+    let image_path = std::path::Path::new(path);
+    let mut metadata = Metadata::new_from_path(image_path).unwrap();
+    let date_string = parsed_date.format(date_format).to_string();
+    metadata.set_tag(ExifTag::DateTimeOriginal(date_string));
+    metadata.write_to_file(image_path).unwrap();
+    let exif_date = get_exif_datetime(path).unwrap();
+    println!("New date is: {exif_date:?}");
 }
 
 // pub fn move_to_datetime_folder(img: &Image) -> Image {

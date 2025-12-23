@@ -1,4 +1,4 @@
-use img_finder::library::index::{get_info, process_whole_task};
+use img_finder::library::index::{get_info, process_whole_task, set_datetime};
 use img_finder::library::stats::symlink_non_date;
 use img_finder::library::{config::Config, stats::stats};
 
@@ -39,6 +39,12 @@ enum AppSubcommand {
         #[arg(long, short, help = "Where to put the created symlinks")]
         output: String,
     },
+    SetDate {
+        // #[arg(long, short, help = "Image to COPY the datetime FROM")]
+        input: String,
+        // #[arg(long, short, help = "Image to SET the datetime TO")]
+        date: String,
+    },
     Info {
         input: String,
     },
@@ -64,6 +70,9 @@ fn main() {
         }
         AppSubcommand::Symlink { input, output } => {
             symlink_non_date(&input, &output, config.screenshot_resolutions);
+        }
+        AppSubcommand::SetDate { input, date } => {
+            set_datetime(&input, &date);
         }
         AppSubcommand::Info { input } => {
             get_info(&input);

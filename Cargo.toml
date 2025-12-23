@@ -13,6 +13,7 @@ hex = "0.4.3"
 image = "0.25.9"
 indicatif = "0.17.11"
 iter-read = "1.1.0"
+little_exif = "0.6.20"
 nom-exif = "2.5.1"
 ratatui = { version = "0.29.0", features = ["all-widgets"] }
 
