@@ -80,13 +80,19 @@ fn is_known(ext: &str, known_formats: &[String]) -> bool {
 //     }
 // }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Dimensions(pub u32, pub u32);
 
 impl From<(u32, u32)> for Dimensions {
     fn from(value: (u32, u32)) -> Self {
         let (w, h) = value;
         Dimensions(w, h)
+    }
+}
+
+impl Dimensions {
+    pub fn reverse(&self) -> Self {
+        Dimensions(self.1, self.0)
     }
 }
 

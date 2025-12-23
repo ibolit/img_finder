@@ -36,6 +36,8 @@ enum AppSubcommand {
     Symlink {
         #[arg(long, short, help = "Yaml file to analyze")]
         input: String,
+        #[arg(long, short, help = "Where to put the created symlinks")]
+        output: String,
     },
 }
 
@@ -57,8 +59,8 @@ fn main() {
         AppSubcommand::Stats { input } => {
             stats(&input);
         }
-        AppSubcommand::Symlink { input } => {
-            symlink_non_date(&input);
+        AppSubcommand::Symlink { input, output } => {
+            symlink_non_date(&input, &output, config.screenshot_resolutions);
         }
     }
 }

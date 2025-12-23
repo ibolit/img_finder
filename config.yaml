@@ -40,3 +40,15 @@ skip_dirs:
   - usr
   - no_index
   - .Trashes
+
+screenshot_resolutions:
+  - - 750
+    - 1334
+  - - 320
+    - 480
+  - - 2048
+    - 1536
+  - - 640
+    - 960
+  - - 719
+    - 1280

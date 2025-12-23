@@ -2,11 +2,14 @@ use std::fs;
 
 use serde::Deserialize;
 
+use crate::library::image::Dimensions;
+
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub image_formats: Vec<String>,
     pub known_formats: Vec<String>,
     pub skip_dirs: Vec<String>,
+    pub screenshot_resolutions: Vec<Dimensions>,
 }
 
 impl Config {

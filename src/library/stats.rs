@@ -6,7 +6,7 @@ use std::path::Path;
 use bytesize::ByteSize;
 use chrono::{DateTime, Utc};
 
-use crate::library::image::{self, extension};
+use crate::library::image::{self, extension, Dimensions};
 use crate::library::io::{read_from_yaml, write_to_yaml};
 
 pub fn stats(input: &str) {
@@ -68,20 +68,29 @@ fn sort_images(images: HashMap<String, Vec<image::Image>>) -> Vec<image::Image> 
     flat_images
 }
 
-pub fn symlink_non_date(input: &str, output: &str) {
+pub fn symlink_non_date(input: &str, output: &str, screenshot_resolutions: Vec<Dimensions>) {
     let images: HashMap<String, Vec<image::Image>> =
-        read_from_yaml(input).unwrap_or_else(|_| panic!("Failed to read the file"));
+        read_from_yaml(input).unwrap_or_else(|e| panic!("Failed to read the file {:?}", e));
     let sorted_images = sort_images(images);
     create_dir(output).unwrap_or_else(|_| panic!("Failed to create the output dir"));
+    create_dir(format!("{output}/screenshots"))
+        .unwrap_or_else(|_| panic!("Failed to create the output dir"));
     for (i, img) in sorted_images
         .iter()
         .take_while(|i| i.date.is_none())
         .enumerate()
     {
         let ext = extension(Path::new(&img.path.clone())).unwrap();
-        let new_filename = format!("{output}/IMG_{:0>6}.{}", i, ext);
-        let res = symlink(img.path.clone(), new_filename);
-        if let Err(e) = res {
+        let new_filename = if screenshot_resolutions.contains(&img.dimensions)
+            || screenshot_resolutions.contains(&img.dimensions.reverse())
+        {
+            format!("{output}/screenshots/IMG_{:0>6}.{}", i, ext)
+        } else {
+            format!("{output}/IMG_{:0>6}.{}", i, ext)
+        };
+
+        let link_result = symlink(img.path.clone(), new_filename);
+        if let Err(e) = link_result {
             eprintln!("Failed to symlink file {}", e);
         }
     }
