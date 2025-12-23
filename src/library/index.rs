@@ -190,7 +190,7 @@ pub fn set_datetime(path: &str, date: &str) {
     }
 
     let image_path = std::path::Path::new(path);
-    let mut metadata = Metadata::new_from_path(image_path).unwrap();
+    let mut metadata = Metadata::new_from_path(image_path).unwrap_or(Metadata::new());
     let date_string = parsed_date.format(date_format).to_string();
     metadata.set_tag(ExifTag::DateTimeOriginal(date_string));
     metadata.write_to_file(image_path).unwrap();
