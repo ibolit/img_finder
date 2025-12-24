@@ -19,11 +19,15 @@ use iter_read::IterRead;
 use sha2::{Digest, Sha256};
 
 use crate::library::image::Dimensions;
+use crate::library::io::read_from_yaml;
+use crate::library::stats::flatten_images;
 use crate::library::{
     image::{self as my, get_exif_datetime},
     io::write_to_yaml,
     util::log_time,
 };
+
+pub type ImageStore = HashMap<String, Vec<my::Image>>;
 
 pub fn process_whole_task(
     folder: &str,
@@ -60,7 +64,7 @@ pub fn process_whole_task(
     log_time("After the loop", verbose);
 
     let imgs_by_hash = img_rx.iter().take(imgs).progress_count(imgs as u64).fold(
-        HashMap::<String, Vec<my::Image>>::new(),
+        ImageStore::new(),
         |mut map, img| {
             map.entry(img.sha256.clone()).or_default().push(img);
             map
@@ -186,7 +190,8 @@ pub fn set_datetime(path: &str, date: &str) {
 
     let exif_date = get_exif_datetime(path);
     if exif_date.is_some() {
-        panic!("You shalt not ovewrite an existing date!");
+        eprintln!("You shalt not ovewrite an existing date!");
+        return;
     }
 
     let image_path = std::path::Path::new(path);
@@ -195,65 +200,32 @@ pub fn set_datetime(path: &str, date: &str) {
     metadata.set_tag(ExifTag::DateTimeOriginal(date_string));
     metadata.write_to_file(image_path).unwrap();
     let exif_date = get_exif_datetime(path).unwrap();
-    println!("New date is: {exif_date:?}");
+    eprintln!("New date is: {exif_date:?}");
 }
 
-// pub fn move_to_datetime_folder(img: &Image) -> Image {
-//     let mut parser = MediaParser::new();
-//     let media_source = MediaSource::file_path(&img.path);
-//     if let Err(_e) = media_source {
-//         return img.clone();
-//     }
+pub fn rescan_null_dates(input_yaml: String) {
+    let mut indexed_files: ImageStore =
+        read_from_yaml(&input_yaml).expect("Failed to open the index file");
 
-//     let media_source = media_source.unwrap();
+    let flat_imgs = flatten_images(&indexed_files);
 
-//     let iter_res: Result<ExifIter, Error> = parser.parse(media_source);
+    let updated_imgs: Vec<my::Image> = flat_imgs
+        .filter(|i| i.date.is_none())
+        .map(|mut i| {
+            i.date = get_exif_datetime(&i.path);
+            i
+        })
+        .filter(|i| i.date.is_some())
+        .collect();
 
-//     let mut candidate_time = Utc::now();
-
-//     match iter_res {
-//         Err(_e) => {
-//             Image {
-//                 path: format!(
-//                     "NO_EXIF" // "/Volumes/Hippie/NO_EXIF/{}-{}",
-//                               // candidate_time.format("%H-%M-%S-%f"),
-//                               // img.name.clone(),
-//                 ),
-//                 ..img.clone()
-//             }
-//             // println!("Img {} has no exif", img.path);
-//         }
-//         Ok(iter) => {
-//             for a in iter {
-//                 let tag = a.tag().unwrap_or(ExifTag::Make);
-//                 if time_tags().contains(&tag) {
-//                     if let Some(Time(c)) = a.get_value() {
-//                         candidate_time = min(candidate_time, c.to_utc());
-//                     }
-//                     if let Some(NaiveDateTime(c)) = a.get_value() {
-//                         candidate_time = min(candidate_time, c.and_utc());
-//                     }
-//                 }
-//             }
-//             let path = candidate_time
-//                 .format("/Volumes/Hippie/SORTED/%Y/%m/%d")
-//                 .to_string();
-//             create_dir_all(&path).unwrap();
-
-//             let new_img_path = format!(
-//                 "{}/{}-{}",
-//                 path,
-//                 candidate_time.format("%H-%M-%S"),
-//                 img.name
-//             );
-
-//             fs::rename(&img.path, &new_img_path)
-//                 .unwrap_or_else(|_| panic!("Failed to move it move it: {}", &img.path));
-
-//             Image {
-//                 path: new_img_path,
-//                 ..img.clone()
-//             }
-//         }
-//     }
-// }
+    for upd_img in updated_imgs {
+        let img_vec = indexed_files
+            .get_mut(&upd_img.sha256)
+            .expect("img_vec is none");
+        let found_img = img_vec
+            .iter_mut()
+            .find(|i| i.path == upd_img.path)
+            .expect("Didn't find an image with that path");
+        found_img.date = upd_img.date;
+    }
+}

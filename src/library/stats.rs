@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs::create_dir;
 use std::os::unix::fs::symlink;
 use std::path::Path;
@@ -7,10 +6,11 @@ use bytesize::ByteSize;
 use chrono::{DateTime, Utc};
 
 use crate::library::image::{self, extension, Dimensions};
+use crate::library::index::ImageStore;
 use crate::library::io::{read_from_yaml, write_to_yaml};
 
 pub fn stats(input: &str) {
-    let images: HashMap<String, Vec<image::Image>> =
+    let images: ImageStore =
         read_from_yaml(input).unwrap_or_else(|_| panic!("Failed to read the file"));
 
     let mut total_size = 0;
@@ -50,26 +50,24 @@ pub fn stats(input: &str) {
     write_to_yaml(&output, "move_plan_2.yaml");
 }
 
-fn flatten_images<'a>(
-    images: &'a HashMap<String, Vec<image::Image>>,
-) -> impl Iterator<Item = image::Image> + 'a {
+pub fn flatten_images<'a>(images: &'a ImageStore) -> impl Iterator<Item = image::Image> + 'a {
     images.values().map(|v| {
         v.iter()
             .filter(|&i| i.date.is_some())
-            .min_by_key(|&i| i.date.unwrap())
+            .min_by_key(|&i| (i.date.unwrap(), i.name.clone()))
             .unwrap_or(&v[0])
             .clone()
     })
 }
 
-fn sort_images(images: HashMap<String, Vec<image::Image>>) -> Vec<image::Image> {
+fn sort_images(images: ImageStore) -> Vec<image::Image> {
     let mut flat_images = flatten_images(&images).collect::<Vec<image::Image>>();
     flat_images.sort_by(|a, b| a.date.cmp(&b.date));
     flat_images
 }
 
 pub fn symlink_non_date(input: &str, output: &str, screenshot_resolutions: Vec<Dimensions>) {
-    let images: HashMap<String, Vec<image::Image>> =
+    let images: ImageStore =
         read_from_yaml(input).unwrap_or_else(|e| panic!("Failed to read the file {:?}", e));
     let sorted_images = sort_images(images);
     create_dir(output).unwrap_or_else(|_| panic!("Failed to create the output dir"));
