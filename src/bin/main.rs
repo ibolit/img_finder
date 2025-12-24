@@ -1,4 +1,4 @@
-use img_finder::library::index::{get_info, process_whole_task, set_datetime};
+use img_finder::library::index::{get_info, process_whole_task, rescan_null_dates, set_datetime};
 use img_finder::library::stats::symlink_non_date;
 use img_finder::library::{config::Config, stats::stats};
 
@@ -48,6 +48,12 @@ enum AppSubcommand {
     Info {
         input: String,
     },
+    Reindex {
+        #[arg(long, short, help = "Yaml file to get null-date images from")]
+        input: String,
+        #[arg(long, short, help = "Where to write the reindexed file")]
+        output: String,
+    },
 }
 
 fn main() {
@@ -77,5 +83,6 @@ fn main() {
         AppSubcommand::Info { input } => {
             get_info(&input);
         }
+        AppSubcommand::Reindex { input, output } => rescan_null_dates(&input, &output),
     }
 }

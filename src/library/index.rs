@@ -3,6 +3,7 @@ extern crate image;
 use chrono::NaiveDateTime;
 use little_exif::exif_tag::ExifTag;
 use little_exif::metadata::Metadata;
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::{
     collections::HashMap,
@@ -72,7 +73,8 @@ pub fn process_whole_task(
     );
     log_time("Done", verbose);
 
-    write_to_yaml(&imgs_by_hash, &compute_yaml_name("images", output));
+    write_image_store(&imgs_by_hash, &compute_yaml_name("images", output));
+    // write_to_yaml(&imgs_by_hash, &compute_yaml_name("images", output));
     write_to_yaml(&unknowns, &compute_yaml_name("unexp", output));
 }
 
@@ -203,7 +205,7 @@ pub fn set_datetime(path: &str, date: &str) {
     eprintln!("New date is: {exif_date:?}");
 }
 
-pub fn rescan_null_dates(input_yaml: String) {
+pub fn rescan_null_dates(input_yaml: &str, output: &str) {
     let mut indexed_files: ImageStore =
         read_from_yaml(&input_yaml).expect("Failed to open the index file");
 
@@ -228,4 +230,15 @@ pub fn rescan_null_dates(input_yaml: String) {
             .expect("Didn't find an image with that path");
         found_img.date = upd_img.date;
     }
+    write_image_store(&indexed_files, output);
+}
+
+fn write_image_store(images: &ImageStore, to: &str) {
+    let mut btree_map: BTreeMap<String, Vec<my::Image>> = BTreeMap::new();
+    for (sha, imgs) in images {
+        let mut imgs = imgs.clone();
+        imgs.sort_by_key(|i| (i.date, i.path.clone()));
+        btree_map.insert(sha.clone(), imgs);
+    }
+    write_to_yaml(&btree_map, to);
 }

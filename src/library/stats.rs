@@ -70,11 +70,15 @@ pub fn symlink_non_date(input: &str, output: &str, screenshot_resolutions: Vec<D
     let images: ImageStore =
         read_from_yaml(input).unwrap_or_else(|e| panic!("Failed to read the file {:?}", e));
     let sorted_images = sort_images(images);
+    let sorted_images = sorted_images
+        .iter()
+        .filter(|i| i.path.ends_with(".jpg") || i.path.ends_with(".JPG"));
+
     create_dir(output).unwrap_or_else(|_| panic!("Failed to create the output dir"));
     create_dir(format!("{output}/screenshots"))
         .unwrap_or_else(|_| panic!("Failed to create the output dir"));
     for (i, img) in sorted_images
-        .iter()
+        // .iter()
         .take_while(|i| i.date.is_none())
         .enumerate()
     {
