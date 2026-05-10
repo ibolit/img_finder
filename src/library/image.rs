@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
 
@@ -10,6 +11,8 @@ use nom_exif::Error;
 use nom_exif::{
     EntryValue::NaiveDateTime, EntryValue::Time, ExifIter, ExifTag, MediaParser, MediaSource,
 };
+
+pub type ImageStore = HashMap<String, Vec<Image>>;
 
 pub struct FileFactory {
     image_formats: Vec<String>,

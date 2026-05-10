@@ -19,7 +19,7 @@ use indicatif::ProgressIterator;
 use iter_read::IterRead;
 use sha2::{Digest, Sha256};
 
-use crate::library::image::Dimensions;
+use crate::library::image::{Dimensions, ImageStore};
 use crate::library::io::read_from_yaml;
 use crate::library::stats::flatten_images;
 use crate::library::{
@@ -27,8 +27,6 @@ use crate::library::{
     io::write_to_yaml,
     util::log_time,
 };
-
-pub type ImageStore = HashMap<String, Vec<my::Image>>;
 
 pub fn process_whole_task(
     folder: &str,

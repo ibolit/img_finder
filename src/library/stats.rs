@@ -5,8 +5,7 @@ use std::path::Path;
 use bytesize::ByteSize;
 use chrono::{DateTime, Utc};
 
-use crate::library::image::{self, extension, Dimensions};
-use crate::library::index::ImageStore;
+use crate::library::image::{self, extension, Dimensions, ImageStore};
 use crate::library::io::{read_from_yaml, write_to_yaml};
 
 pub fn stats(input: &str) {
@@ -17,10 +16,13 @@ pub fn stats(input: &str) {
     let mut clean_size = 0;
     for imgs in images.values() {
         clean_size += imgs[0].file_size;
-        total_size += imgs.iter().fold(0, |mut a, b| {
-            a += b.file_size;
-            a
-        });
+        total_size += imgs.len() as u64 * imgs[0].file_size;
+
+        // panic!("Hello");
+        // total_size += imgs.iter().fold(0, |mut a, b| {
+        //     a += b.file_size;
+        //     a
+        // });
     }
 
     {
